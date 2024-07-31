@@ -1,0 +1,18 @@
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('snakeGame');
+}
+
+function getWords() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  var words = [];
+  
+  for (var r = 0; r < data.length; r++) {
+    for (var c = 0; c < data[r].length; c++) {
+      if (data[r][c]) {
+        words.push({row: r + 1, col: c + 1, value: data[r][c]});
+      }
+    }
+  }
+
+}

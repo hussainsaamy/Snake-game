@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Snake Game</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #333;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(20, 20px);
+      grid-template-rows: repeat(20, 20px);
+      gap: 1px;
+      background-color: #222;
+      border: 2px solid #555;
+    }
+    .cell {
+      width: 20px;
+      height: 20px;
+      background-color: #444;
+    }
+    .snake {
+      background-color: green;
+    }
+    .food {
+      background-color: red;
+    }
+    #controls {
+      margin-top: 20px;
+      text-align: center;
+    }
+    #info {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .pause-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .pause-icon {
+      width: 24px;
+      height: 24px;
+      fill: #fff;
+    }
+    #thank-you-message {
+      display: none;
+      font-size: 2em;
+      margin-top: 20px;
+    }
+    #special-message {
+      display: none;
+      font-size: 1.5em;
+      color: #ff0;
+      margin-top: 20px;
+    }
+    #google-form-link {
+      display: none;
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+    #google-form-link a {
+      color: #0f0;
+      text-decoration: underline;
+    }
+    #check-form-completion {
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Snake Game</h1>
+  <div id="game-board"></div>
+  <div id="controls">
+    <button onclick="move('up')">Up</button>
+    <button onclick="move('down')">Down</button>
+    <button onclick="move('left')">Left</button>
+    <button onclick="move('right')">Right</button>
+    <button class="pause-button" onclick="togglePause()">
+      <svg class="pause-icon" viewBox="0 0 24 24">
+        <rect x="6" y="4" width="4" height="16"></rect>
+        <rect x="14" y="4" width="4" height="16"></rect>
+      </svg>
+    </button>
+  </div>
+  <div id="info">
+    <h3>Score: <span id="score">0</span></h3>
+  </div>
+  <div id="thank-you-message">Thank you</div>
+  <div id="special-message">You have unlocked a special message!</div>
+  <div id="google-form-link">
+    Please complete this <a id="form-link" href="#" target="_blank" onclick="showCheckFormButton()">Google Form</a> to continue the game.
+  </div>
+  <div id="check-form-completion">
+    <button onclick="checkFormCompletion()">I have completed the form</button>
+  </div>
+  <script>
+    const gridSize = 20;
+    const gameBoard = document.getElementById('game-board');
+    const thankYouMessage = document.getElementById('thank-you-message');
+    const specialMessage = document.getElementById('special-message');
+    const googleFormLink = document.getElementById('google-form-link');
+    const formLinkElement = document.getElementById('form-link');
+    const checkFormCompletionButton = document.getElementById('check-form-completion');
+    let snake = [{row: 10, col: 10}];
+    let direction = {row: 0, col: 1}; // Initial direction to the right
+    let food = {row: Math.floor(Math.random() * gridSize), col: Math.floor(Math.random() * gridSize)};
+    let score = 0;
+    let formIndex = 0;
+    const forms = [
+      'https://forms.gle/RQeDgD8d7p77sR168',
+      'https://forms.gle/bBBTYSv6VAXoZiPc7',
+      // Add more form URLs here
+    ];
+    let gameInterval;
+    let isPaused = false;
+
+    function initBoard() {
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.id = `cell-${r}-${c}`;
+          gameBoard.appendChild(cell);
+        }
+      }
+      updateBoard();
+    }
+
+    function updateBoard() {
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.classList.remove('snake', 'food');
+      });
+
+      snake.forEach(segment => {
+        const cell = document.getElementById(`cell-${segment.row}-${segment.col}`);
+        if (cell) cell.classList.add('snake');
+      });
+
+      const foodCell = document.getElementById(`cell-${food.row}-${food.col}`);
+      if (foodCell) foodCell.classList.add('food');
+
+      document.getElementById('score').textContent = score;
+    }
+
+    function moveSnake() {
+      const head = {row: snake[0].row + direction.row, col: snake[0].col + direction.col};
+
+      if (head.row < 0 || head.row >= gridSize || head.col < 0 || head.col >= gridSize || snake.some(segment => segment.row === head.row && segment.col === head.col)) {
+        clearInterval(gameInterval);
+        alert('Game Over! Your score is ' + score);
+        resetGame();
+        return;
+      }
+
+      snake.unshift(head);
+      if (head.row === food.row && head.col === food.col) {
+        score++;
+        if (score % 5 === 0 && score < 20) {
+          specialMessage.style.display = 'block';
+          showGoogleForm();
+        }
+        if (score === 20) {
+          endGame();
+          return;
+        }
+        placeFood();
+      } else {
+        snake.pop();
+      }
+
+      updateBoard();
+    }
+
+    function placeFood() {
+      let newFoodPosition;
+      do {
+        newFoodPosition = {row: Math.floor(Math.random() * gridSize), col: Math.floor(Math.random() * gridSize)};
+      } while (snake.some(segment => segment.row === newFoodPosition.row && segment.col === newFoodPosition.col));
+
+      food = newFoodPosition;
+    }
+
+    function move(dir) {
+      switch (dir) {
+        case 'up': if (direction.row === 0) direction = {row: -1, col: 0}; break;
+        case 'down': if (direction.row === 0) direction = {row: 1, col: 0}; break;
+        case 'left': if (direction.col === 0) direction = {row: 0, col: -1}; break;
+        case 'right': if (direction.col === 0) direction = {row: 0, col: 1}; break;
+      }
+    }
+
+    function resetGame() {
+      snake = [{row: 10, col: 10}];
+      direction = {row: 0, col: 1}; // Reset to initial direction to the right
+      score = 0;
+      specialMessage.style.display = 'none';
+      googleFormLink.style.display = 'none';
+      checkFormCompletionButton.style.display = 'none';
+      formIndex = 0; // Reset form index
+      placeFood();
+      updateBoard();
+      thankYouMessage.style.display = 'none';
+      gameInterval = setInterval(moveSnake, 400); // Slow down the snake
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      thankYouMessage.style.display = 'block';
+    }
+
+    function togglePause() {
+      if (isPaused) {
+        gameInterval = setInterval(moveSnake, 400); // Resume the game
+        isPaused = false;
+      } else {
+        clearInterval(gameInterval); // Pause the game
+        isPaused = true;
+      }
+    }
+
+    function showGoogleForm() {
+      clearInterval(gameInterval);
+      isPaused = true;
+      googleFormLink.style.display = 'block';
+      formLinkElement.href = forms[formIndex];
+      formIndex = (formIndex + 1) % forms.length; // Cycle through forms
+    }
+
+    function checkFormCompletion() {
+      // Implement your method to check if the form is completed.
+      // For simplicity, you could have a button that the user clicks after completing the form.
+      formCompleted = true;
+      if (formCompleted) {
+        googleFormLink.style.display = 'none';
+        togglePause(); // Resume the game
+      }
+    }
+
+    window.onload = () => {
+      initBoard();
+      resetGame();
+    };
+
+    document.addEventListener('keydown', event => {
+      switch (event.key) {
+        case 'ArrowUp': move('up'); break;
+        case 'ArrowDown': move('down'); break;
+        case 'ArrowLeft': move('left'); break;
+        case 'ArrowRight': move('right'); break;
+        case ' ': togglePause(); break; // Space bar to toggle pause
+      }
+    });
+  </script>
+</body>
+</html>
